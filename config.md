@@ -41,4 +41,4 @@ This documentation outlines the configuration options for the LazyAnki add-on.
 <hr>
 
 **Author**: Pavlo Savchuk.<br>
-**GitHub**: [url](https://...)
+**GitHub**: [url](https://github.com/zegalur/lazy-anki)
