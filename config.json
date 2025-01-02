@@ -1,0 +1,29 @@
+{
+    "default_word_field" : "word",
+    "default_reading_field" : "reading",
+    "default_meaning_field" : "meaning",
+    "default_audio_field" : "audio",
+
+    "window_title" : "LazyAnki Player",
+    "window_width_px" : 500,
+    "window_height_px" : 600,
+    "window_position_x_px" : -1,
+    "window_position_y_px" : -1,
+    "window_css" : "",
+
+    "default_answer_time_sec" : 5,
+    "default_result_time_ms" : 1000,
+
+    "style_answer_any" : "font-size: 24pt; ",
+    "style_answer_wrong" : "background-color: brown; ",
+    "style_answer_correct" : "background-color: #74992e; ",
+
+    "style_timer_any" : "font-size: 24pt; font-family: monospace;",
+    "style_timer_green" : "color: green;",
+    "style_timer_red" : "color: red;",
+
+    "style_reading_text" : "margin-top: 1em; font-size: 20pt;",
+    "style_word_text" : "margin-bottom: 1em; font: bold 32pt;",
+
+    "default_option_count" : 4
+}
