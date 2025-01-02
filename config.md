@@ -37,3 +37,8 @@ This documentation outlines the configuration options for the LazyAnki add-on.
 ### Other
 
 - **`default_option_count`**: The default number of answer options per question. Must be set between `2` and `9` (default `4`).  
+
+<hr>
+
+**Author**: Pavlo Savchuk.<br>
+**GitHub**: [url](https://...)
