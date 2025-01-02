@@ -25,7 +25,7 @@ The main idea is to turn the review process into a series of multiple-choice que
 
 ## Troubleshooting
 
-- If you **don't hear the audio**, it might be because Anki is slow to play the first audio file. Since LazyAnki is fast-paced, we recommend playing some audio beforehand (e.g., by showing a card). Once you hear a sound, start your LazyAnki session. This is a known issue and will be addressed in the future.
+- If you **don't hear the audio**, it might be because Anki is slow to play the first audio file. Since LazyAnki is fast-paced, it is better to play some audio beforehand (e.g., by showing a card). Once you hear a sound, start your LazyAnki session. This is a known issue and will be addressed in the future.
 
 - Ensure that you have either modified your decks to follow the default field naming convention used by the add-on (`word`, `reading`, `meaning`, `audio`) or updated the field names in the add-on settings (see [config.md](config.md)).
 
