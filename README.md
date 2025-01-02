@@ -6,7 +6,7 @@
     </picture>
 </p>
 
-**LazyAnki** is an Anki add-on designed to help you reduce the time and effort needed to review and study cards while still providing meaningful exposure to the language, which can lead to long-term benefits. It is created for Anki users and language learning enthusiasts.
+**LazyAnki** is an Anki add-on designed to help you reduce the time and effort needed to review and study vocabulary cards while still providing meaningful exposure to the language, which can lead to long-term benefits. It is created for Anki users and language learning enthusiasts.
 
 The main idea is to turn the review process into a series of multiple-choice questions with one correct answer, minimizing the time required for each question.
 
