@@ -8,6 +8,7 @@ LazyAnki TODO list
 - [ ] Display loading progress
 - [ ] Show a prompt: 'Wait until you hear the sound and press "Enter"'
 - [ ] Implement mouse control
+- [ ] Correct result time & failed result time
 
 ### In Progress
 
