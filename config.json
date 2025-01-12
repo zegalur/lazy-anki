@@ -12,7 +12,8 @@
     "window_css" : "",
 
     "default_answer_time_sec" : 5,
-    "default_result_time_ms" : 1000,
+    "default_correct_time_ms" : 500,
+    "default_failed_time_ms" : 1500,
 
     "style_answer_any" : "font-size: 24pt; ",
     "style_answer_wrong" : "background-color: brown; ",

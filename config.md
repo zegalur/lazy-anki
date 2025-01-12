@@ -21,7 +21,8 @@ This documentation outlines the configuration options for the LazyAnki add-on.
 ### Timer
 
 - **`default_answer_time_sec`**: The amount of time (in seconds) allotted to answer a question.  
-- **`default_result_time_ms`**: The duration (in milliseconds) for displaying the answer result.  
+- **`default_correct_time_ms`**: The duration (in milliseconds) for displaying the result when the answer is correct.
+- **`default_failed_time_ms`**: The duration (in milliseconds) for displaying the correct answer when the answer was skipped, incorrect, or time ran out.
 
 ### Text Stylesheets
 

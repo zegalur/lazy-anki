@@ -45,7 +45,8 @@ class LazyAnkiWnd(QWidget):
         # Setup the timer
         self.OPTION_COUNT = config['default_option_count']
         self.TIMER_SEC = config['default_answer_time_sec']
-        self.RESULT_TIMER_MS = config['default_result_time_ms']
+        self.RESULT_CORRECT_MS = config['default_correct_time_ms']
+        self.RESULT_FAILED_MS = config['default_failed_time_ms']
         self.time_left_sec = 0
 
         self.correct_answer = -1
@@ -239,18 +240,25 @@ class LazyAnkiWnd(QWidget):
                 self.timerLabel.setStyleSheet(self.TIMER_STYLE_RED)
                 self.timerLabel.setText("TIMEOUT!")
                 self._mark_again()
-                self._showAnswer()
+                self._showAnswer(is_correct=False)
         elif self.state == self.STATE_ANSWER:
             self._showNextCard()
     
 
-    def _showAnswer(self) -> None:
+    def _showAnswer(self, is_correct) -> None:
         # Highlight the right answer.
         self.options[self.correct_answer].setStyleSheet(
                 self.ANSWER_STYLE_CORRECT)
         
+        # Change the current state.
         self.state = self.STATE_ANSWER
-        self.timer.start(self.RESULT_TIMER_MS)
+
+        # Start the results timer. Timer durations depends on whether 
+        # the answer was correct or incorrect.
+        if is_correct:
+            self.timer.start(self.RESULT_CORRECT_MS)
+        else:
+            self.timer.start(self.RESULT_FAILED_MS)
 
 
     def _selectAnswer(self, index) -> None:
@@ -270,7 +278,7 @@ class LazyAnkiWnd(QWidget):
             self._mark_correct()
             self.timerLabel.setStyleSheet(self.TIMER_STYLE_GREEN)
             
-        self._showAnswer()
+        self._showAnswer(is_correct=(index == self.correct_answer))
 
 
     def _mark_correct(self) -> None:
