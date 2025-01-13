@@ -8,7 +8,6 @@ LazyAnki TODO list
 - [ ] Display loading progress
 - [ ] Show a prompt: 'Wait until you hear the sound and press "Enter"'
 - [ ] Implement mouse control
-- [ ] Correct result time & failed result time
 
 ### In Progress
 
@@ -19,3 +18,4 @@ LazyAnki TODO list
 
 ### Done ✓
 
+- [x] Different timer durations depending on whether the answer was correct or incorrect
