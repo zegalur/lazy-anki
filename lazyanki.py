@@ -11,11 +11,27 @@ from aqt.utils import showInfo
 from aqt.utils import qconnect
 from aqt.qt import *
 
+from enum import Enum
+
 import random
 
 
+class PlayerMode(Enum):
+    MEANING_ONLY = 1
+    MEANING_READING = 2
+    #KANJI_MODE = 3
+
+
+class PlayerState(Enum):
+    INITIAL = 1
+    COUNTDOWN = 2
+    ANSWER = 3
+    DONE = 4
+    NEW = 5
+
+
 class LazyAnkiWnd(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, mode=PlayerMode.MEANING_ONLY):
         super().__init__(parent)
 
         # Read the config file.
@@ -51,14 +67,8 @@ class LazyAnkiWnd(QWidget):
 
         self.correct_answer = -1
         self.new_cards = []
-
-        # State machine constants and variables.
-        self.STATE_INITIAL = "INITIAL"
-        self.STATE_COUNTDOWN = "COUNTDOWN"
-        self.STATE_ANSWER = "ANSWER"
-        self.STATE_DONE = "DONE"
-        self.STATE_NEW = "NEW"
-        self.state = self.STATE_INITIAL
+        self.mode = mode
+        self.state = PlayerState.INITIAL
 
         random.seed()
 
@@ -87,14 +97,46 @@ class LazyAnkiWnd(QWidget):
 
         # Generate false answers list.
         active_deck_ids = mw.col.decks.active()
-        self.false_answers = []
+        meanings = []
+        readings = []
         for deck_id in active_deck_ids:
             deck = mw.col.decks.get(deck_id)
             deck_card_ids = mw.col.find_cards('"deck:%s"'%(deck["name"]))
             for card_id in deck_card_ids:
                 note = mw.col.get_card(card_id).note()
-                self.false_answers.append(note[self.MEANING_FIELD])
-        self.false_answers_set = set(self.false_answers)
+                # Check if note has all the essential fields:
+                if self.MEANING_FIELD not in note:
+                    t = self.timerLabel.text()
+                    self.timerLabel.setText( t + "\n\nError:\n" +
+                            "A note without the meaning field" +
+                            (" `{}`.".format(self.MEANING_FIELD)) )
+                    return
+                if self.READING_FIELD not in note:
+                    t = self.timerLabel.text()
+                    self.timerLabel.setText( t + "\n\nError:\n" + 
+                            "A note without the reading field" +
+                            (" `{}`.".format(self.READING_FIELD)) )
+                    return
+                if self.WORD_FIELD not in note:
+                    t = self.timerLabel.text()
+                    self.timerLabel.setText( t + "\n\nError:\n" + 
+                            "A note without the word field" + 
+                            (" `{}`.".format(self.WORD_FIELD)) )
+                    return
+                # Add this card into meanings and readings:
+                meanings.append(note[self.MEANING_FIELD])
+                readings.append(note[self.READING_FIELD])
+
+        if len(meanings) == 0:
+            t = self.timerLabel.text()
+            self.timerLabel.setText( t + "\n\nError:\n" + 
+                    "An empty deck or loading error.\n" +
+                    "Please, close this window, select\n" + 
+                    "a deck and try again." )
+            return
+
+        self.meanings_set = set(meanings)
+        self.readings_set = set(readings)
 
         self.timerLabel.setText("---")
 
@@ -128,23 +170,22 @@ class LazyAnkiWnd(QWidget):
 
 
     def keyPressEvent(self, event):
-        if self.state in [self.STATE_DONE, self.STATE_INITIAL]:
+        if self.state in [PlayerState.DONE, PlayerState.INITIAL]:
             super().keyPressEvent(event)
             return
 
         scan_code = event.key()
 
-        if self.state == self.STATE_COUNTDOWN:
+        if self.state == PlayerState.COUNTDOWN:
             if scan_code >= aqt.Qt.Key.Key_0:
                 if scan_code <= self.OPTION_COUNT + aqt.Qt.Key.Key_0:
                     self._selectAnswer(scan_code - aqt.Qt.Key.Key_1)
 
-        if self.state == self.STATE_NEW:
+        if self.state == PlayerState.NEW:
             if scan_code in [aqt.Qt.Key.Key_Enter, aqt.Qt.Key.Key_Return]:
                 self._showNextCard()
 
         super().keyPressEvent(event)
-            
 
 
     def _showNextCard(self) -> None:
@@ -162,13 +203,15 @@ class LazyAnkiWnd(QWidget):
         self.wordLabel.setText(note[self.WORD_FIELD])
         self.readingLabel.setText(note[self.READING_FIELD])
 
-        # Play the audio.
-        audio_file = note[self.AUDIO_FIELD].removeprefix("[sound:").removesuffix("]")
-        aqt.sound.av_player.play_file(audio_file)
+        # Play the audio (when available).
+        if self.AUDIO_FIELD in note:
+            audio = note[self.AUDIO_FIELD]
+            audio_file = audio.removeprefix("[sound:").removesuffix("]")
+            aqt.sound.av_player.play_file(audio_file)
 
         # Get some random false answers.
         false_answers = []
-        tmp_copy = self.false_answers_set.copy()
+        tmp_copy = self.meanings_set.copy()
         tmp_copy.remove(note[self.MEANING_FIELD])
         for i in range(self.OPTION_COUNT - 1):
             if len(tmp_copy) == 0:
@@ -198,14 +241,14 @@ class LazyAnkiWnd(QWidget):
 
         if (card.queue == 0) and (card.id not in self.new_cards):
             # It's a completely new card.
-            self.state = self.STATE_NEW
+            self.state = PlayerState.NEW
             self.options[self.correct_answer].setStyleSheet(
                 self.ANSWER_STYLE_CORRECT)
             self.timerLabel.setText("NEW!")
             self.new_cards.append(card.id)
         else:
             # Start the answer timer.
-            self.state = self.STATE_COUNTDOWN
+            self.state = PlayerState.COUNTDOWN
             self.timer.start(1000)
 
 
@@ -218,7 +261,7 @@ class LazyAnkiWnd(QWidget):
     
     def _showDone(self) -> None:
         self.timer.stop()
-        self.state = self.STATE_DONE
+        self.state = PlayerState.DONE
         self.timerLabel.setText("DONE!")
         self.timerLabel.setStyleSheet(self.TIMER_STYLE_GREEN)
         self.wordLabel.setText("")
@@ -230,7 +273,7 @@ class LazyAnkiWnd(QWidget):
     
     # This will be called by the timer object.
     def _on_timer(self) -> None:
-        if self.state == self.STATE_COUNTDOWN:
+        if self.state == PlayerState.COUNTDOWN:
             self.time_left_sec -= 1
             if self.time_left_sec <= 0:
                 self.time_left_sec = 0
@@ -241,7 +284,7 @@ class LazyAnkiWnd(QWidget):
                 self.timerLabel.setText("TIMEOUT!")
                 self._mark_again()
                 self._showAnswer(is_correct=False)
-        elif self.state == self.STATE_ANSWER:
+        elif self.state == PlayerState.ANSWER:
             self._showNextCard()
     
 
@@ -251,7 +294,7 @@ class LazyAnkiWnd(QWidget):
                 self.ANSWER_STYLE_CORRECT)
         
         # Change the current state.
-        self.state = self.STATE_ANSWER
+        self.state = PlayerState.ANSWER
 
         # Start the results timer. Timer durations depends on whether 
         # the answer was correct or incorrect.
@@ -289,7 +332,7 @@ class LazyAnkiWnd(QWidget):
         mw.col.sched.answerCard(self.current_card, 1)
 
 
-def startLazyAnki() -> None:
+def startLazyAnki(mode) -> None:
     # Get the active deck.
     active_deck = mw.col.decks.active
     if active_deck is None:
@@ -303,6 +346,17 @@ def startLazyAnki() -> None:
 
 def initLazyAnki() -> QAction:
     # Start LazyAnki action
-    startAction = QAction("Start LazyAnki", mw)
-    qconnect(startAction.triggered, startLazyAnki)
-    mw.form.menuTools.addAction(startAction)
+
+    subMenu = QMenu("LazyAnki", mw)
+    meaningOnly = QAction("Meaning Only...", subMenu)
+    meaningReading = QAction("Meaning + Reading...", subMenu)
+
+    qconnect(meaningOnly.triggered, 
+             lambda:startLazyAnki(PlayerMode.MEANING_ONLY))
+    qconnect(meaningReading.triggered, 
+             lambda:startLazyAnki(PlayerMode.MEANING_READING))
+
+    subMenu.addAction(meaningOnly)
+    subMenu.addAction(meaningReading)
+    mw.form.menuTools.addMenu(subMenu)
+
