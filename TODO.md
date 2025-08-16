@@ -24,3 +24,4 @@ LazyAnki TODO list
 ### Done ✓
 
 - [x] Different timer durations depending on whether the answer was correct or incorrect
+- [x] Two different modes: meaning only, and meaning+reading
