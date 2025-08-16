@@ -69,6 +69,8 @@ class LazyAnkiWnd(QWidget):
         self.new_cards = []
         self.mode = mode
         self.state = PlayerState.INITIAL
+        self.test_reading = False
+        self.prev_correct = False
 
         random.seed()
 
@@ -189,30 +191,41 @@ class LazyAnkiWnd(QWidget):
 
 
     def _showNextCard(self) -> None:
+        show_reading = True if self.mode == PlayerMode.MEANING_ONLY else False
+        answ_set = self.meanings_set
+        answ_field = self.MEANING_FIELD
+        
         # Reset the timer.
         self.timer.stop()
         self.time_left_sec = self.TIMER_SEC
         self._updateTimerText()
         
-        self.current_card = card = mw.col.sched.getCard()
-        if not card:
-            self._showDone()
-            return
+        if self.test_reading == False:
+            self.current_card = mw.col.sched.getCard()
+            if not self.current_card:
+                self._showDone()
+                return
+        else:
+            # Continue with previously loaded card
+            answ_set = self.readings_set
+            answ_field = self.READING_FIELD
 
+        card = self.current_card
         note = card.note()
         self.wordLabel.setText(note[self.WORD_FIELD])
-        self.readingLabel.setText(note[self.READING_FIELD])
 
         # Play the audio (when available).
+        self.audio_file = ""
         if self.AUDIO_FIELD in note:
             audio = note[self.AUDIO_FIELD]
-            audio_file = audio.removeprefix("[sound:").removesuffix("]")
-            aqt.sound.av_player.play_file(audio_file)
+            self.audio_file = audio.removeprefix("[sound:").removesuffix("]")
+            if self.mode == PlayerMode.MEANING_ONLY:
+                aqt.sound.av_player.play_file(self.audio_file)
 
         # Get some random false answers.
         false_answers = []
-        tmp_copy = self.meanings_set.copy()
-        tmp_copy.remove(note[self.MEANING_FIELD])
+        tmp_copy = answ_set.copy()
+        tmp_copy.remove(note[answ_field])
         for i in range(self.OPTION_COUNT - 1):
             if len(tmp_copy) == 0:
                 break
@@ -222,7 +235,7 @@ class LazyAnkiWnd(QWidget):
 
         # Set the correct answer.
         self.correct_answer = random.randint(0, len(false_answers))
-        self.options[self.correct_answer].setText(note[self.MEANING_FIELD])
+        self.options[self.correct_answer].setText(note[answ_field])
 
         # Set the false answers.
         i = 0
@@ -246,11 +259,18 @@ class LazyAnkiWnd(QWidget):
                 self.ANSWER_STYLE_CORRECT)
             self.timerLabel.setText("NEW!")
             self.new_cards.append(card.id)
+            show_reading = True
+            if self.mode == PlayerMode.MEANING_READING:
+                aqt.sound.av_player.play_file(self.audio_file)
         else:
             # Start the answer timer.
             self.state = PlayerState.COUNTDOWN
             self.timer.start(1000)
 
+        if show_reading:
+            self.readingLabel.setText(note[self.READING_FIELD])
+        else:
+            self.readingLabel.setText("")
 
     def _updateTimerText(self) -> None:
         m = self.time_left_sec // 60
@@ -325,11 +345,32 @@ class LazyAnkiWnd(QWidget):
 
 
     def _mark_correct(self) -> None:
-        mw.col.sched.answerCard(self.current_card, 3)
+        if self.mode == PlayerMode.MEANING_ONLY:
+            mw.col.sched.answerCard(self.current_card, 3)
+        elif self.mode == PlayerMode.MEANING_READING:
+            if self.test_reading == True:
+                self.test_reading = False
+                aqt.sound.av_player.play_file(self.audio_file)
+                if self.prev_correct == True:
+                    mw.col.sched.answerCard(self.current_card, 3)
+                else:
+                    mw.col.sched.answerCard(self.current_card, 1)
+            else:
+                self.test_reading = True
+                self.prev_correct = True
 
 
     def _mark_again(self) -> None:
-        mw.col.sched.answerCard(self.current_card, 1)
+        if self.mode == PlayerMode.MEANING_ONLY:
+            mw.col.sched.answerCard(self.current_card, 1)
+        elif self.mode == PlayerMode.MEANING_READING:
+            if self.test_reading == True:
+                self.test_reading = False    
+                aqt.sound.av_player.play_file(self.audio_file)
+                mw.col.sched.answerCard(self.current_card, 1)
+            else:
+                self.test_reading = True
+                self.prev_correct = False
 
 
 def startLazyAnki(mode) -> None:
@@ -340,7 +381,7 @@ def startLazyAnki(mode) -> None:
         return
 
     # Create and show LazyAnki window.
-    mw.lazyAnkiWnd = wnd = LazyAnkiWnd()
+    mw.lazyAnkiWnd = wnd = LazyAnkiWnd(mode=mode)
     wnd.show()
     
 
