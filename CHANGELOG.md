@@ -4,7 +4,7 @@ All significant modifications to this project will be recorded in this file. The
 
 ## [Unreleased]
 
-## [1.2.0] - 2025-08-16
+## [1.2.0] - 2025-08-18
 
 ### Added
 
