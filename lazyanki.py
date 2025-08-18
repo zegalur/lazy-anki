@@ -18,7 +18,7 @@ import random
 
 class PlayerMode(Enum):
     MEANING_ONLY = 1
-    MEANING_READING = 2
+    READING_MEANING = 2
     #KANJI_MODE = 3
 
 
@@ -69,7 +69,7 @@ class LazyAnkiWnd(QWidget):
         self.new_cards = []
         self.mode = mode
         self.state = PlayerState.INITIAL
-        self.test_reading = False
+        self.test_meaning = False
         self.prev_correct = False
 
         random.seed()
@@ -191,35 +191,46 @@ class LazyAnkiWnd(QWidget):
 
 
     def _showNextCard(self) -> None:
-        show_reading = True if self.mode == PlayerMode.MEANING_ONLY else False
-        answ_set = self.meanings_set
-        answ_field = self.MEANING_FIELD
+        show_reading = True
+        if self.mode == PlayerMode.READING_MEANING:
+            show_reading = self.test_meaning
+
+        answ_set = self.readings_set
+        answ_field = self.READING_FIELD
         
         # Reset the timer.
         self.timer.stop()
         self.time_left_sec = self.TIMER_SEC
         self._updateTimerText()
         
-        if self.test_reading == False:
+        if self.test_meaning == False:
             self.current_card = mw.col.sched.getCard()
             if not self.current_card:
                 self._showDone()
                 return
         else:
             # Continue with previously loaded card
-            answ_set = self.readings_set
-            answ_field = self.READING_FIELD
+            answ_set = self.meanings_set
+            answ_field = self.MEANING_FIELD
 
         card = self.current_card
         note = card.note()
         self.wordLabel.setText(note[self.WORD_FIELD])
+        new_card = False
 
-        # Play the audio (when available).
+        # Check if this is a new card:
+        if (card.queue == 0) and (card.id not in self.new_cards):
+            new_card = True
+            if self.mode == PlayerMode.READING_MEANING:
+                answ_set = self.meanings_set
+                answ_field = self.MEANING_FIELD
+
+        # Get the audio (when available).
         self.audio_file = ""
         if self.AUDIO_FIELD in note:
             audio = note[self.AUDIO_FIELD]
             self.audio_file = audio.removeprefix("[sound:").removesuffix("]")
-            if self.mode == PlayerMode.MEANING_ONLY:
+            if self.mode == PlayerMode.MEANING_ONLY or self.test_meaning:
                 aqt.sound.av_player.play_file(self.audio_file)
 
         # Get some random false answers.
@@ -252,25 +263,26 @@ class LazyAnkiWnd(QWidget):
             option.setText("%d) %s" % (index + 1, option.text()))
             option.setStyleSheet(self.ANSWER_STYLE)
 
-        if (card.queue == 0) and (card.id not in self.new_cards):
-            # It's a completely new card.
+        if new_card:
+            # Show it as a completely new card.
             self.state = PlayerState.NEW
             self.options[self.correct_answer].setStyleSheet(
                 self.ANSWER_STYLE_CORRECT)
             self.timerLabel.setText("NEW!")
             self.new_cards.append(card.id)
             show_reading = True
-            if self.mode == PlayerMode.MEANING_READING:
+            if self.mode == PlayerMode.READING_MEANING:
                 aqt.sound.av_player.play_file(self.audio_file)
-        else:
-            # Start the answer timer.
-            self.state = PlayerState.COUNTDOWN
-            self.timer.start(1000)
 
         if show_reading:
             self.readingLabel.setText(note[self.READING_FIELD])
         else:
             self.readingLabel.setText("")
+
+        if not new_card:
+            # Start the answer timer if card is not a new card:
+            self.state = PlayerState.COUNTDOWN
+            self.timer.start(1000)
 
     def _updateTimerText(self) -> None:
         m = self.time_left_sec // 60
@@ -347,29 +359,27 @@ class LazyAnkiWnd(QWidget):
     def _mark_correct(self) -> None:
         if self.mode == PlayerMode.MEANING_ONLY:
             mw.col.sched.answerCard(self.current_card, 3)
-        elif self.mode == PlayerMode.MEANING_READING:
-            if self.test_reading == True:
-                self.test_reading = False
-                aqt.sound.av_player.play_file(self.audio_file)
+        elif self.mode == PlayerMode.READING_MEANING:
+            if self.test_meaning == True:
+                self.test_meaning = False
                 if self.prev_correct == True:
                     mw.col.sched.answerCard(self.current_card, 3)
                 else:
                     mw.col.sched.answerCard(self.current_card, 1)
             else:
-                self.test_reading = True
+                self.test_meaning = True
                 self.prev_correct = True
 
 
     def _mark_again(self) -> None:
         if self.mode == PlayerMode.MEANING_ONLY:
             mw.col.sched.answerCard(self.current_card, 1)
-        elif self.mode == PlayerMode.MEANING_READING:
-            if self.test_reading == True:
-                self.test_reading = False    
-                aqt.sound.av_player.play_file(self.audio_file)
+        elif self.mode == PlayerMode.READING_MEANING:
+            if self.test_meaning == True:
+                self.test_meaning = False    
                 mw.col.sched.answerCard(self.current_card, 1)
             else:
-                self.test_reading = True
+                self.test_meaning = True
                 self.prev_correct = False
 
 
@@ -390,14 +400,14 @@ def initLazyAnki() -> QAction:
 
     subMenu = QMenu("LazyAnki", mw)
     meaningOnly = QAction("Meaning Only...", subMenu)
-    meaningReading = QAction("Meaning + Reading...", subMenu)
+    readingMeaning = QAction("Reading + Meaning...", subMenu)
 
     qconnect(meaningOnly.triggered, 
              lambda:startLazyAnki(PlayerMode.MEANING_ONLY))
-    qconnect(meaningReading.triggered, 
-             lambda:startLazyAnki(PlayerMode.MEANING_READING))
+    qconnect(readingMeaning.triggered, 
+             lambda:startLazyAnki(PlayerMode.READING_MEANING))
 
     subMenu.addAction(meaningOnly)
-    subMenu.addAction(meaningReading)
+    subMenu.addAction(readingMeaning)
     mw.form.menuTools.addMenu(subMenu)
 
