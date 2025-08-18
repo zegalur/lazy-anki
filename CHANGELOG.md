@@ -6,7 +6,10 @@ All significant modifications to this project will be recorded in this file. The
 
 ## [1.2.0] - 2025-08-16
 
+### Added
+
 - Reading + Meaning mode.
+- 'Audio Initialization' stage.
 
 ## [1.1.0] - 2025-01-12
 
