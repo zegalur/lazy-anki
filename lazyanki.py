@@ -23,6 +23,7 @@ class PlayerMode(Enum):
 
 
 class PlayerState(Enum):
+    LOAD_SOUND = 0
     INITIAL = 1
     COUNTDOWN = 2
     ANSWER = 3
@@ -101,6 +102,7 @@ class LazyAnkiWnd(QWidget):
         active_deck_ids = mw.col.decks.active()
         meanings = []
         readings = []
+        some_audio = ""
         for deck_id in active_deck_ids:
             deck = mw.col.decks.get(deck_id)
             deck_card_ids = mw.col.find_cards('"deck:%s"'%(deck["name"]))
@@ -125,6 +127,8 @@ class LazyAnkiWnd(QWidget):
                             "A note without the word field" + 
                             (" `{}`.".format(self.WORD_FIELD)) )
                     return
+                if self.AUDIO_FIELD in note:
+                    some_audio = note[self.AUDIO_FIELD]
                 # Add this card into meanings and readings:
                 meanings.append(note[self.MEANING_FIELD])
                 readings.append(note[self.READING_FIELD])
@@ -136,6 +140,11 @@ class LazyAnkiWnd(QWidget):
                     "Please, close this window, select\n" + 
                     "a deck and try again." )
             return
+
+        if some_audio != "":
+            self.audio_file = some_audio.removeprefix("[sound:").removesuffix("]")
+            aqt.sound.av_player.play_file(self.audio_file)
+            self.state = PlayerState.LOAD_SOUND
 
         self.meanings_set = set(meanings)
         self.readings_set = set(readings)
@@ -163,7 +172,16 @@ class LazyAnkiWnd(QWidget):
             wndLayout.addRow(optionLabel)
             self.options.append(optionLabel)
 
-        self._showNextCard()
+        if self.state == PlayerState.LOAD_SOUND:
+            self.timerLabel.setText(
+                    "\n\nAudio Initialization...\n\n" +
+                    "Press 'Return' after\nthe sound plays.")
+            self.readingLabel.setText("")
+            self.wordLabel.setText("")
+            for opt in self.options:
+                opt.setText("")
+        else:
+            self._showNextCard()
     
 
     def closeEvent(self, event):
@@ -187,6 +205,12 @@ class LazyAnkiWnd(QWidget):
             if scan_code in [aqt.Qt.Key.Key_Enter, aqt.Qt.Key.Key_Return]:
                 self._showNextCard()
 
+        if self.state == PlayerState.LOAD_SOUND:
+            if scan_code in [aqt.Qt.Key.Key_Enter, aqt.Qt.Key.Key_Return]:
+                self.state = PlayerState.INITIAL
+                self.timerLabel.setText("Please Wait...")
+                self._showNextCard()
+
         super().keyPressEvent(event)
 
 
@@ -203,13 +227,15 @@ class LazyAnkiWnd(QWidget):
         self.time_left_sec = self.TIMER_SEC
         self._updateTimerText()
         
-        if self.test_meaning == False:
+        if self.mode == PlayerMode.MEANING_ONLY or self.test_meaning == False:
+            # Get the next card:
             self.current_card = mw.col.sched.getCard()
             if not self.current_card:
                 self._showDone()
                 return
-        else:
-            # Continue with previously loaded card
+        
+        if self.mode == PlayerMode.MEANING_ONLY or self.test_meaning:
+            # Test meanings:
             answ_set = self.meanings_set
             answ_field = self.MEANING_FIELD
 
