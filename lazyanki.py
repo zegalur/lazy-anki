@@ -128,7 +128,8 @@ class LazyAnkiWnd(QWidget):
                             (" `{}`.".format(self.WORD_FIELD)) )
                     return
                 if self.AUDIO_FIELD in note:
-                    some_audio = note[self.AUDIO_FIELD]
+                    if note[self.AUDIO_FIELD] != "":
+                        some_audio = note[self.AUDIO_FIELD]
                 # Add this card into meanings and readings:
                 meanings.append(note[self.MEANING_FIELD])
                 readings.append(note[self.READING_FIELD])
